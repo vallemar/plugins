@@ -204,7 +204,7 @@ class Session implements Session {
                 const destFileName = curParam.destFilename || curParam.filename.substring(curParam.filename.lastIndexOf('/') + 1, curParam.filename.length);
                 MPF.appendParam(curParam.name, null, curParam.filename, curParam.mimeType, destFileName);
             } else {
-                MPF.appendParam(curParam.name, curParam.value);
+                MPF.appendParam(curParam.name, curParam.value, null, curParam.contentType, null);
             }
         }
         const header = MPF.getHeader();
@@ -314,21 +314,21 @@ class MultiMultiPartForm {
         this.fields = [];
     }
 
-    public appendParam(name: string, value: string, filename?: string, mimeType?: string, destFileName?: string): void {
+    public appendParam(name: string, value: string, filename?: string, contentType?: string, destFileName?: string): void {
         // If all we are doing is passing a field, we just add it to the fields list
         if (filename == null) {
-            this.fields.push({ name: name, value: value });
+            this.fields.push({ name: name, value: value, contentType: contentType });
             return;
         }
         // Load file
-        mimeType = mimeType || "application/data";
+        contentType = contentType || "application/data";
 
         if (filename.startsWith("~/")) {
             filename = filename.replace("~/", knownFolders.currentApp().path + "/");
         }
 
         const finalName = destFileName || filename.substr(filename.lastIndexOf('/') + 1, filename.length);
-        this.fields.push({ name: name, filename: filename, destFilename: finalName, mimeType: mimeType });
+        this.fields.push({ name: name, filename: filename, destFilename: finalName, contentType: contentType });
     }
 
     public generateFile(): string {
@@ -345,11 +345,14 @@ class MultiMultiPartForm {
             results += "--" + this.boundary + CRLF;
             results += 'Content-Disposition: form-data; name="' + this.fields[i].name + '"';
             if (!this.fields[i].filename) {
+                if (this.fields[i].contentType) {
+                    results += CRLF + "Content-Type: " + this.fields[i].contentType;
+                }
                 results += CRLF + CRLF + this.fields[i].value + CRLF;
             } else {
                 results += '; filename="' + this.fields[i].destFilename + '"';
-                if (this.fields[i].mimeType) {
-                    results += CRLF + "Content-Type: " + this.fields[i].mimeType;
+                if (this.fields[i].contentType) {
+                    results += CRLF + "Content-Type: " + this.fields[i].contentType;
                 }
                 results += CRLF + CRLF;
             }
